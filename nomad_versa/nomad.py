@@ -12,7 +12,7 @@ import torch.nn.functional as F
 from datetime import datetime
 
 
-class Nomad:
+class Nomad():
     def __init__(self, device=None, cache_dir="./nomad_pt-models"):
 
         # *** DEVICE SETTINGS ***
