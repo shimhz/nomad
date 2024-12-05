@@ -36,7 +36,7 @@ class Nomad():
 
         # Download wav2vec 2.0 base
         url_w2v = "https://dl.fbaipublicfiles.com/fairseq/wav2vec/wav2vec_small.pt"
-        w2v_path = "{}}/wav2vec_small.pt".format(cache_dir)
+        w2v_path = "{}/wav2vec_small.pt".format(cache_dir)
         if not os.path.isfile(w2v_path):
             print("Downloading wav2vec 2.0 started")
             urlretrieve(url_w2v, w2v_path)
