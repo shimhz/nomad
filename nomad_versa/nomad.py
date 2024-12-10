@@ -56,7 +56,7 @@ class Nomad():
 
         # Download NOMAD
         url_nomad_db = "https://www.dropbox.com/scl/fi/uws3wk327adbwqo22cr0p/nomad_best_model.pt?rlkey=cco21iba6xxi81a0dm9lpa7zj&dl=1"
-        nomad_path = "{}}/nomad_best_model.pt".format(cache_dir)
+        nomad_path = "{}/nomad_best_model.pt".format(cache_dir)
         if not os.path.isfile(nomad_path):
             print("Downloading NOMAD weights started")
             urlretrieve(url_nomad_db, nomad_path)
