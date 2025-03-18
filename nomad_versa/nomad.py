@@ -83,7 +83,7 @@ class Nomad():
         self.nomad_loss.eval()
 
     def predict(
-        self, mode="dir", nmr="data/nmr-data", deg="data/test-data", results_path=None
+        self, nmr="data/nmr-data", deg="data/test-data", results_path=None
     ):
         if nmr is None:
             raise Exception(
@@ -92,23 +92,6 @@ class Nomad():
         if deg is None:
             raise Exception(
                 "test_path not specified, you need to pass a valide value to test_path"
-            )
-
-        if mode == "dir":
-            if os.path.isdir(nmr) == False:
-                raise Exception(
-                    f"Path to the non-matching reference files {nmr} does not exist"
-                )
-            if os.path.isdir(deg) == False:
-                raise Exception(f"Path to the test files {deg} does not exist")
-        elif mode == "csv":
-            if os.path.isfile(nmr) == False:
-                raise Exception(f"File {nmr} does not exist")
-            if os.path.isfile(deg) == False:
-                raise Exception(f"File {deg} does not exist")
-        else:
-            raise Exception(
-                f"Mode value {mode} is not valid. Valid values are dir and csv"
             )
 
         print(f"Compute non-matching reference embeddings from {nmr}")
@@ -130,35 +113,7 @@ class Nomad():
             .set_index("Test File")
             .round(3)
         )
-        """
-        df_dm = pd.DataFrame(distance_matrix).round(3)
-        df_dm["Test File"] = test_files
-        df_dm.set_index("Test File", inplace=True)
-        df_dm.columns = [x.split("/")[-1].split(".")[0] for x in nmr_embeddings.index]
 
-        # Save results
-        if results_path == None:
-            now = datetime.now()
-            dt_string = now.strftime("%d-%m-%Y_%H-%M-%S")
-            results_avg_path = os.path.join("results-csv", dt_string)
-            if os.path.isdir(results_avg_path) == False:
-                os.makedirs(results_avg_path)
-            results_scores_path = os.path.join("results-csv", dt_string)
-            if os.path.isdir(results_scores_path) == False:
-                os.makedirs(results_scores_path)
-            results_avg_path = os.path.join(
-                results_avg_path, f"{dt_string}_nomad_avg.csv"
-            )
-            results_scores_path = os.path.join(
-                results_scores_path, f"{dt_string}_nomad_scores.csv"
-            )
-        else:
-            results_avg_path = os.path.join(results_path, "nomad_avg.csv")
-            results_scores_path = os.path.join(results_path, "nomad_scores.csv")
-
-        df_avg_nomad.reset_index().to_csv(results_avg_path, index=False)
-        df_dm.reset_index().to_csv(results_scores_path, index=False)
-        """
         return df_avg_nomad
 
     def forward(self, estimate, clean):
@@ -168,19 +123,23 @@ class Nomad():
         return loss
 
     def get_embeddings(self, path):
-        # If mode == dir
+
         if os.path.isdir(path):
             # Dataframe
             data = pd.DataFrame(os.listdir(path))
             data.columns = ["filename"]
             data["filename"] = [os.path.join(path, x) for x in data["filename"]]
-        # If mode == csv
+
         elif os.path.isfile(path):
-            data = pd.read_csv(path)
-            if "filename" not in data.columns:
-                raise Exception(
-                    "File {path} not including a column called filename. Please pass a csv file with a column called filename that includes the absolute filpaths of the waveforms."
-                )
+            if path[:-4] == ".csv":
+                data = pd.read_csv(path)
+                if "filename" not in data.columns:
+                    raise Exception(
+                        "File {path} not including a column called filename. Please pass a csv file with a column called filename that includes the absolute filpaths of the waveforms."
+                    )
+            else:
+                # Create a dataframe with just this single file
+                data = pd.DataFrame({"filename": [path]})
 
         # Calculate embeddings
         embeddings = self.get_embeddings_csv(self.model, data)
