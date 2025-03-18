@@ -3,7 +3,6 @@ from nomad import Nomad
 
 
 @click.command()
-@click.option("--mode", type=str, help="Choose mode dir or csv")
 @click.option("--nmr", type=str, help="Path to non-matching reference files")
 @click.option("--deg", type=str, help="Path to test files")
 @click.option(
@@ -12,11 +11,11 @@ from nomad import Nomad
     default=None,
     help="Specify device, cuda or cpu. Automatically set cuda if None and GPU is detected",
 )
-def main(mode, nmr, deg, device):
+def main(nmr, deg, device):
 
     # Predict nomad scores
     nomad_model = Nomad(device)
-    nomad_avg = nomad_model.predict(mode, nmr, deg)
+    nomad_avg = nomad_model.predict(nmr, deg)
     # print("Nomad average scores, printing top 5 test files")
     # print(nomad_avg.head())
 
