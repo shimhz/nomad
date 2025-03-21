@@ -95,26 +95,22 @@ class Nomad():
             )
 
         print(f"Compute non-matching reference embeddings from {nmr}")
-        nmr_embeddings = self.get_embeddings(nmr).set_index("filename")
+        #nmr_embeddings = self.get_embeddings(nmr).set_index("filename")
+        nmr_embeddings = self.get_embeddings(self.model, nmr)
+
 
         print(f"Compute degraded embeddings from {deg}")
-        test_embeddings = self.get_embeddings(deg).set_index("filename")
+        #test_embeddings = self.get_embeddings(deg).set_index("filename")
+        test_embeddings = self.get_embeddings(self.model, deg)
 
         # Compute pairwise distance matrix
         distance_matrix = cdist(test_embeddings, nmr_embeddings)
 
         # Compute average NOMAD score
-        avg_nomad = np.mean(distance_matrix, axis=1)
+        #avg_nomad = np.mean(distance_matrix, axis=1)
+        avg_nomad = np.mean(distance_matrix)
 
-        # Return both distance matrix and mean nomad score
-        test_files = [x.split("/")[-1].split(".")[0] for x in test_embeddings.index]
-        df_avg_nomad = (
-            pd.DataFrame({"Test File": test_files, "NOMAD": avg_nomad})
-            .set_index("Test File")
-            .round(3)
-        )
-
-        return df_avg_nomad
+        return avg_nomad
 
     def forward(self, estimate, clean):
         estimate_embeddings = self.lossnet_layers(estimate)
@@ -122,43 +118,16 @@ class Nomad():
         loss = self.nomad_loss(clean_embeddings, estimate_embeddings)
         return loss
 
-    def get_embeddings(self, path):
+    def get_embeddings(self, model, audio_files):
 
-        if os.path.isdir(path):
-            # Dataframe
-            data = pd.DataFrame(os.listdir(path))
-            data.columns = ["filename"]
-            data["filename"] = [os.path.join(path, x) for x in data["filename"]]
-
-        elif os.path.isfile(path):
-            if path[:-4] == ".csv":
-                data = pd.read_csv(path)
-                if "filename" not in data.columns:
-                    raise Exception(
-                        "File {path} not including a column called filename. Please pass a csv file with a column called filename that includes the absolute filpaths of the waveforms."
-                    )
-            else:
-                # Create a dataframe with just this single file
-                data = pd.DataFrame({"filename": [path]})
-
-        # Calculate embeddings
-        embeddings = self.get_embeddings_csv(self.model, data)
-        return embeddings
-
-    # Function that extract NOMAD embeddings and store them in a csv
-    def get_embeddings_csv(self, model, file_names, root=False):
-        file_names_arr = np.array(file_names)
+        audio_files = np.array([audio_files])
         embeddings = []
 
         model.eval()
         with torch.no_grad():
-            for i, filename_anchor in enumerate(tqdm(file_names_arr)):
-                if root:
-                    filepath = os.path.join(root, filename_anchor)
-                else:
-                    filepath = filename_anchor
+            for i, audio_file in enumerate(tqdm(audio_files)):
 
-                wave = self.load_processing_versa(filepath, trim=False)
+                wave = torch.from_numpy(audio_file).unsqueeze(0).float()
                 lengths = None
 
                 wave = wave.to(self.DEVICE)
@@ -166,12 +135,9 @@ class Nomad():
                 embeddings.append(nomad_embeddings.squeeze().cpu().detach().numpy())
 
             embeddings = np.array(embeddings)
-            embeddings = pd.DataFrame(embeddings)
-            df_emb = pd.concat([file_names.reset_index(), embeddings], axis=1).drop(
-                "index", axis=1
-            )
+ 
 
-        return df_emb
+        return embeddings
 
     # Load wave file
     def load_processing_versa(self, source_wav, target_sr=16000, trim=False):
@@ -187,8 +153,8 @@ class Nomad():
             The preprocessed audio waveform as a PyTorch tensor.
         """
 
-        # Load waveform
-        wave = torch.tensor(source_wav).unsqueeze(0).float()
+        print (type(source_wav), source_wav.dtype)
+        wave = torch.from_numpy(source_wav).unsqueeze(0).float()
 
         # Trim audio to 10 secs
         if trim:
